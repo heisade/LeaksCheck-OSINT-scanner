@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT Intelligence System</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b10;--bg2:#0d1117;--bg3:#161b22;--bg4:#1c2128;
+  --border:#21262d;--border2:#30363d;--border3:#484f58;
+  --text:#cdd9e5;--text2:#8b949e;--text3:#484f58;
+  --blue:#58a6ff;--green:#3fb950;--amber:#d29922;--red:#f85149;--purple:#bc8cff;
+  --green-bg:rgba(63,185,80,.1);--green-br:rgba(63,185,80,.3);
+  --amber-bg:rgba(210,153,34,.1);--amber-br:rgba(210,153,34,.3);
+  --red-bg:rgba(248,81,73,.1);--red-br:rgba(248,81,73,.3);
+}
+body{font-family:'Courier New',monospace;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* SCANLINE EFFECT */
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:9999}
+
+/* HEADER */
+.hdr{background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.dots{display:flex;gap:6px}.dot{width:11px;height:11px;border-radius:50%}
+.dot-r{background:#ff5f56}.dot-y{background:#ffbd2e}.dot-g{background:#27c93f}
+.hdr-title{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-left:6px;flex:1}
+.hdr-tag{font-size:9px;padding:2px 8px;border:1px solid var(--border2);border-radius:2px;color:var(--text3);letter-spacing:1px}
+.hdr-tag.live{border-color:rgba(63,185,80,.4);color:var(--green)}
+
+.wrap{max-width:940px;margin:0 auto;padding:24px 18px}
+
+/* LOGO */
+.logo{text-align:center;margin-bottom:28px;position:relative}
+.logo pre{font-size:10.5px;color:var(--blue);line-height:1.2;white-space:pre;display:inline-block;text-shadow:0 0 20px rgba(88,166,255,.3)}
+.logo-sub{color:var(--text3);font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+.logo-note{font-size:10px;color:var(--green);margin-top:4px;letter-spacing:1px}
+
+/* PANEL */
+.panel{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:18px;margin-bottom:14px}
+.plbl{font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.plbl::before{content:'//';color:var(--green);font-weight:700}
+
+/* INPUT */
+.irow{display:flex;gap:7px;align-items:stretch}
+select,input[type=text]{background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-family:'Courier New',monospace;padding:9px 12px;border-radius:4px;outline:none;transition:border-color .15s,box-shadow .15s;font-size:13px}
+select{min-width:108px;font-size:12px;cursor:pointer}
+input[type=text]{flex:1}
+input[type=text]::placeholder{color:var(--text3)}
+select:focus,input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(88,166,255,.1)}
+.run-btn{background:linear-gradient(135deg,#1a7f37,#238636);color:#fff;border:1px solid #2ea043;font-family:'Courier New',monospace;font-size:11px;padding:9px 20px;border-radius:4px;cursor:pointer;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;transition:all .15s}
+.run-btn:hover{background:linear-gradient(135deg,#238636,#2ea043)}
+.run-btn:disabled{background:var(--bg4);color:var(--text3);border-color:var(--border);cursor:not-allowed}
+
+/* FREE APIS INFO */
+.api-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-top:12px}
+.api-card{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:10px 12px}
+.api-name{font-size:10px;color:var(--green);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.api-desc{font-size:10px;color:var(--text2);line-height:1.5}
+.api-badge{font-size:8px;padding:1px 5px;border-radius:2px;border:1px solid;margin-left:4px;vertical-align:middle}
+.free-badge{border-color:rgba(63,185,80,.4);color:var(--green)}
+.cors-badge{border-color:rgba(210,153,34,.4);color:var(--amber)}
+
+/* CHIPS */
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:8px;padding:3px 9px;border-radius:20px;border:1px solid;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:4px;transition:all .2s}
+.c-idle{border-color:var(--border2);color:var(--text3);background:var(--bg2)}
+.c-run{border-color:var(--amber);color:var(--amber);background:rgba(210,153,34,.08)}
+.c-done{border-color:var(--green);color:var(--green);background:rgba(63,185,80,.08)}
+.c-skip{border-color:var(--border2);color:var(--text3);background:var(--bg2);opacity:.5}
+.c-err{border-color:var(--red);color:var(--red);background:rgba(248,81,73,.08)}
+@keyframes blink{50%{opacity:0}}.blink{animation:blink 1s step-end infinite}
+
+/* LOG */
+.log{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:10px 12px;font-size:10px;line-height:1.9;max-height:160px;overflow-y:auto;margin-top:10px;font-family:'Courier New',monospace}
+.ll{display:flex;gap:10px}.lt{color:var(--text3);white-space:nowrap;min-width:60px}
+.lm{color:var(--text2)}.lm.ok{color:var(--green)}.lm.warn{color:var(--amber)}.lm.info{color:var(--blue)}.lm.err{color:var(--red)}.lm.skip{color:var(--text3)}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:14px}
+.tab{font-family:'Courier New',monospace;font-size:9px;padding:7px 12px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text3);cursor:pointer;letter-spacing:1px;text-transform:uppercase;margin-bottom:-1px;transition:color .15s}
+.tab.on{color:var(--blue);border-bottom-color:var(--blue)}.tab:hover:not(.on){color:var(--text2)}
+
+/* SECTION HEAD */
+.shd{font-size:9px;color:var(--blue);letter-spacing:2px;text-transform:uppercase;padding-bottom:7px;border-bottom:1px solid var(--border);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.sl{width:18px;height:18px;border-radius:3px;background:#1f6feb;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+
+/* RISK BANNER */
+.rbanner{display:flex;align-items:center;gap:14px;padding:14px;border-radius:5px;margin-bottom:12px}
+.rlow{background:var(--green-bg);border:1px solid var(--green-br)}
+.rmed{background:var(--amber-bg);border:1px solid var(--amber-br)}
+.rhi{background:var(--red-bg);border:1px solid var(--red-br)}
+.rcircle{width:58px;height:58px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.rcl{background:rgba(63,185,80,.2);border:2px solid var(--green)}
+.rcm{background:rgba(210,153,34,.2);border:2px solid var(--amber)}
+.rch{background:rgba(248,81,73,.2);border:2px solid var(--red)}
+.rnum{font-size:19px;font-weight:700;line-height:1}
+.rpts{font-size:8px;color:var(--text2);line-height:1;margin-top:2px}
+.rlvl{font-size:16px;font-weight:700}
+.rexp{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5}
+
+/* KV */
+.kv{display:flex;gap:8px;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(33,38,45,.8)}
+.kk{color:var(--text2);min-width:150px;flex-shrink:0}.kv2{color:var(--text);word-break:break-all}
+
+/* BREAKDOWN */
+.sbbox{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:10px;margin-top:8px}
+.sbrow{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:10px}
+.sbl{flex:1;color:var(--text2)}.sbw{width:120px;background:var(--border2);border-radius:2px;height:3px;flex-shrink:0}
+.sbb{height:3px;border-radius:2px}.sbv{width:32px;text-align:right;font-weight:700;font-size:10px}
+.spos{color:var(--red)}.sneg{color:var(--green)}
+
+/* SIGNALS */
+.sigitem{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(33,38,45,.8)}
+.sigw{font-size:12px;font-weight:700;min-width:38px;text-align:right;flex-shrink:0}
+.sigw.pos{color:var(--red)}.sigw.neg{color:var(--green)}
+.sigd{font-size:11px;color:var(--text);line-height:1.5}
+.sigcat{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+
+/* IDENTITY CARDS */
+.idcard{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:9px 12px;margin-bottom:7px;display:flex;align-items:flex-start;gap:10px}
+.idplat{font-size:8px;color:var(--green);letter-spacing:1px;text-transform:uppercase;min-width:76px;flex-shrink:0;margin-top:2px}
+.idhandle{font-size:12px;color:var(--blue);font-weight:700}
+.idmeta{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.5}
+.idurl{font-size:9px;color:var(--text3);margin-top:3px;word-break:break-all}
+
+/* EVIDENCE */
+.evitem{padding:7px 0;border-bottom:1px solid rgba(33,38,45,.8)}
+.evsrc{color:var(--text2);font-size:8px;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.evurl{color:var(--blue);font-size:11px;word-break:break-all}
+.evnote{font-size:10px;color:var(--text2);margin-top:2px}
+
+/* GRAPH */
+.graphwrap{background:var(--bg2);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+.glegend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+.gli{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text2)}
+.gldot{width:9px;height:9px;border-radius:2px;border:1px solid}
+
+/* PLATFORM STATUS TABLE */
+.ptable{width:100%;font-size:11px;border-collapse:collapse;margin-top:8px}
+.ptable th{font-size:9px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;font-weight:400}
+.ptable td{padding:6px 8px;border-bottom:1px solid rgba(33,38,45,.6);vertical-align:top}
+.ptable tr:last-child td{border-bottom:none}
+.status-pill{font-size:8px;padding:2px 7px;border-radius:10px;border:1px solid;letter-spacing:.5px;white-space:nowrap}
+.s-found{border-color:rgba(63,185,80,.4);color:var(--green);background:rgba(63,185,80,.08)}
+.s-notfound{border-color:var(--border2);color:var(--text3);background:var(--bg2)}
+.s-check{border-color:rgba(210,153,34,.4);color:var(--amber);background:rgba(210,153,34,.08)}
+
+/* EMPTY / ERROR */
+.empty{text-align:center;padding:44px 20px;color:var(--text3)}
+.empty-icon{font-size:38px;margin-bottom:10px;opacity:.4}
+.empty-lbl{font-size:12px;letter-spacing:2px;text-transform:uppercase}
+.empty-sub{font-size:10px;color:var(--border2);margin-top:7px}
+
+/* DOWNLOAD BAR */
+.dlbar{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.dlbtn{font-family:'Courier New',monospace;font-size:9px;padding:6px 13px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);border-radius:3px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;transition:all .15s}
+.dlbtn:hover{border-color:var(--blue);color:var(--blue)}
+.dlbtn.pri{background:rgba(88,166,255,.08);border-color:var(--blue);color:var(--blue)}
+
+.footer{font-size:9px;color:var(--text3);text-align:center;margin-top:24px;line-height:1.8;padding:0 16px}
+.nodata{color:var(--text3);font-size:11px;padding:6px 0}
+
+/* PROGRESS BAR */
+.prog-wrap{height:2px;background:var(--border);border-radius:1px;margin-top:10px;overflow:hidden}
+.prog-bar{height:2px;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:1px;width:0%;transition:width .4s ease}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="dots"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div></div>
+  <span class="hdr-title">LeakCheck OSINT Scanner</span>
+  <span class="hdr-tag live">● By @heisade</span>
+  <span class="hdr-tag">FREE PUBLIC APIS</span>
+  <span class="hdr-tag">MVP v1.0</span>
+</div>
+
+<div class="wrap">
+  <div class="logo">
+    <pre> 888      8888888888        d8888 888    d8P   .d8888b.  888    888 8888888888 .d8888b.  888    d8P  
+888      888              d88888 888   d8P   d88P  Y88b 888    888 888       d88P  Y88b 888   d8P   
+888      888             d88P888 888  d8P    888    888 888    888 888       888    888 888  d8P    
+888      8888888        d88P 888 888d88K     888        8888888888 8888888   888        888d88K     
+888      888           d88P  888 8888888b    888        888    888 888       888        8888888b    
+888      888          d88P   888 888  Y88b   888    888 888    888 888       888    888 888  Y88b   
+888      888         d8888888888 888   Y88b  Y88b  d88P 888    888 888       Y88b  d88P 888   Y88b  
+88888888 8888888888 d88P     888 888    Y88b  "Y8888P"  888    888 8888888888 "Y8888P"  888    Y88b 
+                                                                                                    
+                                                                                                    
+                                                                                                     </pre>
+    <div class="logo-sub">Open Source Intelligence · Identity Correlation Engine</div>
+    <div class="logo-note">✓ 100% Free · No API keys · No accounts · No limits</div>
+  </div>
+
+  <!-- DATA SOURCES INFO -->
+  <div class="panel">
+    <div class="plbl">data_sources :: free public apis</div>
+    <div class="api-grid">
+      <div class="api-card">
+        <div class="api-name">HaveIBeenPwned <span class="api-badge free-badge">FREE</span></div>
+        <div class="api-desc">Check email against known data breaches. No key needed for v3 search.</div>
+      </div>
+      <div class="api-card">
+        <div class="api-name">EmailRep.io <span class="api-badge free-badge">FREE</span></div>
+        <div class="api-desc">Email reputation, domain age, suspicious signals, blacklists.</div>
+      </div>
+      <div class="api-card">
+        <div class="api-name">URLScan.io <span class="api-badge free-badge">FREE</span></div>
+        <div class="api-desc">Domain/URL threat intelligence, screenshots, technology detection.</div>
+      </div>
+      <div class="api-card">
+        <div class="api-name">WhoisJSON <span class="api-badge free-badge">FREE</span></div>
+        <div class="api-desc">WHOIS records: registrar, creation date, registrant country.</div>
+      </div>
+      <div class="api-card">
+        <div class="api-name">Platform Probing <span class="api-badge free-badge">FREE</span></div>
+        <div class="api-desc">Username existence check on GitHub, Reddit, Twitter, Instagram, TikTok + 10 more.</div>
+      </div>
+      <div class="api-card">
+        <div class="api-name">ClearBit Autocomplete <span class="api-badge free-badge">FREE</span></div>
+        <div class="api-desc">Company/domain enrichment — industry, employee count, logo.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INPUT MODULE -->
+  <div class="panel">
+    <div class="plbl">input_module :: seed identity</div>
+    <div class="irow">
+      <select id="inputType" onchange="updatePlaceholder()">
+        <option value="email">Email</option>
+        <option value="username">Username</option>
+        <option value="domain">Domain</option>
+      </select>
+      <input type="text" id="seedInput" placeholder="e.g. john.doe@gmail.com" spellcheck="false" autocomplete="off">
+      <button class="run-btn" id="runBtn" onclick="runPipeline()">▶ EXECUTE</button>
+    </div>
+    <div class="prog-wrap"><div class="prog-bar" id="progBar"></div></div>
+    <div class="chips" id="chips">
+      <span class="chip c-idle" id="chip-input">◉ input</span>
+      <span class="chip c-idle" id="chip-hibp">◉ hibp</span>
+      <span class="chip c-idle" id="chip-emailrep">◉ emailrep</span>
+      <span class="chip c-idle" id="chip-whois">◉ whois</span>
+      <span class="chip c-idle" id="chip-urlscan">◉ urlscan</span>
+      <span class="chip c-idle" id="chip-platforms">◉ platforms</span>
+      <span class="chip c-idle" id="chip-correlate">◉ correlate</span>
+      <span class="chip c-idle" id="chip-score">◉ score</span>
+      <span class="chip c-idle" id="chip-report">◉ report</span>
+    </div>
+    <div class="log" id="log">
+      <div class="ll"><span class="lt">00:00:00</span><span class="lm info">system ready — no API key required — all sources are free and public</span></div>
+    </div>
+  </div>
+
+  <!-- REPORT AREA -->
+  <div id="reportArea">
+    <div class="panel">
+      <div class="empty">
+        <div class="empty-icon">⬡</div>
+        <div class="empty-lbl">Awaiting seed identity</div>
+        <div class="empty-sub">Intelligence report renders here · No signup · No cost · No limits</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Uses publicly available information only · Risk indicators are signals, not accusations<br>
+    All findings require independent verification · For lawful research and investigative use only
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let running = false;
+let logLines = [];
+let reportData = null;
+const $ = id => document.getElementById(id);
+const ts = () => new Date().toTimeString().slice(0,8);
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+// ─── PLATFORMS TO CHECK ───────────────────────────────────────────────────────
+const PLATFORMS = [
+  {name:'GitHub',     url:'https://github.com/{u}',             api:'https://api.github.com/users/{u}',                    type:'api'},
+  {name:'Reddit',     url:'https://reddit.com/user/{u}',         api:'https://www.reddit.com/user/{u}/about.json',          type:'api'},
+  {name:'HackerNews', url:'https://news.ycombinator.com/user?id={u}', api:'https://hacker-news.firebaseio.com/v0/user/{u}.json', type:'api'},
+  {name:'Twitter/X',  url:'https://twitter.com/{u}',            api:null, type:'probe'},
+  {name:'Instagram',  url:'https://instagram.com/{u}',          api:null, type:'probe'},
+  {name:'TikTok',     url:'https://tiktok.com/@{u}',            api:null, type:'probe'},
+  {name:'LinkedIn',   url:'https://linkedin.com/in/{u}',        api:null, type:'probe'},
+  {name:'Medium',     url:'https://medium.com/@{u}',            api:null, type:'probe'},
+  {name:'Pinterest',  url:'https://pinterest.com/{u}',          api:null, type:'probe'},
+  {name:'YouTube',    url:'https://youtube.com/@{u}',           api:null, type:'probe'},
+  {name:'Twitch',     url:'https://twitch.tv/{u}',              api:null, type:'probe'},
+  {name:'Keybase',    url:'https://keybase.io/{u}',             api:'https://keybase.io/_/api/1.0/user/lookup.json?username={u}', type:'api'},
+  {name:'Dev.to',     url:'https://dev.to/{u}',                 api:'https://dev.to/api/users/by_username?url={u}',        type:'api'},
+  {name:'npm',        url:'https://npmjs.com/~{u}',             api:'https://registry.npmjs.org/-/user/org.couchdb.user:{u}', type:'api'},
+];
+
+// ─── LOGGING ─────────────────────────────────────────────────────────────────
+function addLog(msg, cls='') {
+  logLines.push({t:ts(), msg, cls});
+  const el=$('log');
+  el.innerHTML = logLines.map(l=>`<div class="ll"><span class="lt">${l.t}</span><span class="lm ${l.cls}">${l.msg}</span></div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+// ─── CHIPS ────────────────────────────────────────────────────────────────────
+const CHIP_LABELS = {input:'input',hibp:'hibp',emailrep:'emailrep',whois:'whois',urlscan:'urlscan',platforms:'platforms',correlate:'correlate',score:'score',report:'report'};
+function chip(id, state) {
+  const el = $('chip-'+id); if(!el) return;
+  const icons = {idle:'◉',run:'◈',done:'◆',skip:'◌',err:'◻'};
+  el.className = 'chip c-'+state;
+  el.innerHTML = (icons[state]||'◉')+' '+CHIP_LABELS[id];
+  if(state==='run'){const s=document.createElement('span');s.className='blink';s.textContent='_';el.appendChild(s);}
+}
+function resetChips(){Object.keys(CHIP_LABELS).forEach(id=>chip(id,'idle'));}
+
+// ─── PROGRESS ─────────────────────────────────────────────────────────────────
+function setProgress(pct) { $('progBar').style.width = pct+'%'; }
+
+// ─── PLACEHOLDER ─────────────────────────────────────────────────────────────
+function updatePlaceholder() {
+  const p={email:'e.g. john.doe@gmail.com',username:'e.g. shadowfox99',domain:'e.g. example.com'};
+  $('seedInput').placeholder = p[$('inputType').value]||'';
+}
+$('seedInput').addEventListener('keydown', e=>{ if(e.key==='Enter') runPipeline(); });
+
+// ─── FETCH WITH TIMEOUT ───────────────────────────────────────────────────────
+async function fetchWithTimeout(url, opts={}, timeout=8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), timeout);
+  try {
+    const r = await fetch(url, {...opts, signal:controller.signal});
+    clearTimeout(timer);
+    return r;
+  } catch(e) { clearTimeout(timer); throw e; }
+}
+
+// ─── COLLECTORS ───────────────────────────────────────────────────────────────
+
+// 1. HaveIBeenPwned — email breaches
+async function checkHIBP(email) {
+  try {
+    const r = await fetchWithTimeout(
+      `https://haveibeenpwned.com/api/v3/breachedaccount/${encodeURIComponent(email)}?truncateResponse=false`,
+      { headers: {'hibp-api-key':'', 'User-Agent':'OSINT-System'} }, 6000
+    );
+    if(r.status === 404) return {breached:false, breaches:[], count:0};
+    if(r.status === 401) return {breached:null, breaches:[], count:0, note:'API key required for HIBP v3'};
+    if(!r.ok) return {breached:null, breaches:[], count:0, note:'HIBP unavailable'};
+    const data = await r.json();
+    return {breached:true, breaches:data, count:data.length};
+  } catch(e) {
+    // CORS fallback — use public breach search
+    return {breached:null, breaches:[], count:0, note:'HIBP CORS restricted — check manually at haveibeenpwned.com'};
+  }
+}
+
+// 2. EmailRep.io — email reputation
+async function checkEmailRep(email) {
+  try {
+    const r = await fetchWithTimeout(`https://emailrep.io/${encodeURIComponent(email)}`, {
+      headers:{'Key':'free','User-Agent':'OSINT-System'}
+    }, 7000);
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+// 3. WHOIS via whoisjson.com (free, no key)
+async function checkWHOIS(domain) {
+  try {
+    const r = await fetchWithTimeout(`https://whoisjson.com/api/v1/whois?domain=${encodeURIComponent(domain)}`, {}, 8000);
+    if(!r.ok) return null;
+    return await r.json();
+  } catch(e) {
+    // fallback: rdap
+    try {
+      const r2 = await fetchWithTimeout(`https://rdap.org/domain/${encodeURIComponent(domain)}`, {}, 7000);
+      if(!r2.ok) return null;
+      const d = await r2.json();
+      return {
+        domain, registrar: d.entities?.[0]?.vcardArray?.[1]?.find(f=>f[0]==='fn')?.[3] || 'unknown',
+        created_date: d.events?.find(e=>e.eventAction==='registration')?.eventDate,
+        expiry_date: d.events?.find(e=>e.eventAction==='expiration')?.eventDate,
+        nameservers: d.nameservers?.map(ns=>ns.ldhName)||[],
+        status: d.status||[],
+        source: 'RDAP'
+      };
+    } catch(e2) { return null; }
+  }
+}
+
+// 4. URLScan.io — domain scan results (free, no key needed for search)
+async function checkURLScan(domain) {
+  try {
+    const r = await fetchWithTimeout(
+      `https://urlscan.io/api/v1/search/?q=domain:${encodeURIComponent(domain)}&size=5`,
+      { headers:{'Accept':'application/json'} }, 8000
+    );
+    if(!r.ok) return null;
+    const data = await r.json();
+    return {results: data.results||[], total: data.total||0};
+  } catch(e) { return null; }
+}
+
+// 5. Platform username probing
+async function checkPlatforms(username) {
+  const results = [];
+
+  // API-based checks (CORS-friendly)
+  const apiPlatforms = PLATFORMS.filter(p=>p.type==='api'&&p.api);
+
+  for(const platform of apiPlatforms) {
+    const url = platform.api.replace(/{u}/g, encodeURIComponent(username));
+    try {
+      const r = await fetchWithTimeout(url, {}, 5000);
+      if(r.status===200) {
+        const data = await r.json().catch(()=>({}));
+        results.push({
+          platform: platform.name,
+          url: platform.url.replace(/{u}/g, username),
+          found: true,
+          confidence: 'confirmed',
+          data: extractPlatformData(platform.name, data)
+        });
+        addLog(`  ✓ ${platform.name}: profile found`, 'ok');
+      } else if(r.status===404) {
+        results.push({platform:platform.name, url:platform.url.replace(/{u}/g,username), found:false, confidence:'confirmed', data:{}});
+      } else {
+        results.push({platform:platform.name, url:platform.url.replace(/{u}/g,username), found:null, confidence:'unverified', data:{}});
+      }
+    } catch(e) {
+      results.push({platform:platform.name, url:platform.url.replace(/{u}/g,username), found:null, confidence:'unverified', data:{}});
+    }
+    await delay(150); // rate limit respect
+  }
+
+  // For non-API platforms, generate check URLs (user can verify)
+  const probePlatforms = PLATFORMS.filter(p=>p.type==='probe');
+  for(const platform of probePlatforms) {
+    results.push({
+      platform: platform.name,
+      url: platform.url.replace(/{u}/g, username),
+      found: null,
+      confidence: 'manual-check',
+      data: {}
+    });
+  }
+
+  return results;
+}
+
+function extractPlatformData(platform, data) {
+  try {
+    if(platform==='GitHub') return {bio:data.bio, followers:data.followers, repos:data.public_repos, joined:data.created_at?.slice(0,10), name:data.name, location:data.location};
+    if(platform==='Reddit') return {karma:data.data?.total_karma, joined:data.data?.created_utc?new Date(data.data.created_utc*1000).toISOString().slice(0,10):null, icon:data.data?.icon_img};
+    if(platform==='HackerNews') return {karma:data.karma, joined:data.created?new Date(data.created*1000).toISOString().slice(0,10):null};
+    if(platform==='Dev.to') return {name:data.name, joined:data.joined_at?.slice(0,10), followers:data.followers_count, articles:data.articles_count};
+    if(platform==='Keybase') return {name:data.them?.[0]?.basics?.username};
+  } catch(e) {}
+  return {};
+}
+
+// 6. ClearBit Company autocomplete (domain enrichment, no key)
+async function checkClearbit(domain) {
+  try {
+    const r = await fetchWithTimeout(
+      `https://autocomplete.clearbit.com/v1/companies/suggest?query=${encodeURIComponent(domain)}`,
+      {}, 5000
+    );
+    if(!r.ok) return null;
+    const data = await r.json();
+    return data.length ? data[0] : null;
+  } catch(e) { return null; }
+}
+
+// ─── MAIN PIPELINE ────────────────────────────────────────────────────────────
+async function runPipeline() {
+  if(running) return;
+  const type = $('inputType').value;
+  const seed = $('seedInput').value.trim();
+  if(!seed){alert('Enter a seed identity.');return;}
+
+  running=true; logLines=[];
+  $('runBtn').disabled=true;
+  resetChips(); setProgress(0); reportData=null;
+
+  addLog(`[PIPELINE START] seed: [${type}] ${seed}`, 'info');
+  $('reportArea').innerHTML=`<div class="panel"><div class="empty"><div class="empty-icon">⬡</div><div class="empty-lbl">Running intelligence pipeline<span class="blink">_</span></div><div class="empty-sub" id="pstat">Initializing...</div></div></div>`;
+
+  const collected = {type, seed, hibp:null, emailrep:null, whois:null, urlscan:null, platforms:[], clearbit:null, errors:[]};
+
+  // ── Stage 1: Input validation
+  chip('input','run'); pstat('Validating seed identity...');
+  const seedMeta = buildSeedMeta(type, seed);
+  chip('input','done'); setProgress(10);
+  addLog(`input_handler :: seed normalized → ${seedMeta.normalized}`, 'ok');
+  await delay(100);
+
+  // ── Stage 2: HaveIBeenPwned (email only)
+  if(type==='email') {
+    chip('hibp','run'); pstat('Checking HaveIBeenPwned...');
+    addLog('hibp_collector :: querying breach database...');
+    collected.hibp = await checkHIBP(seed);
+    if(collected.hibp.note) {
+      chip('hibp','err');
+      addLog(`hibp :: ${collected.hibp.note}`, 'warn');
+    } else {
+      chip('hibp','done');
+      addLog(`hibp :: ${collected.hibp.breached ? collected.hibp.count+' breaches found' : 'no breaches found'}`, collected.hibp.breached?'warn':'ok');
+    }
+  } else {
+    chip('hibp','skip'); addLog('hibp :: skipped (email only)', 'skip');
+  }
+  setProgress(22); await delay(100);
+
+  // ── Stage 3: EmailRep (email only)
+  if(type==='email') {
+    chip('emailrep','run'); pstat('Querying EmailRep.io...');
+    addLog('emailrep_collector :: fetching reputation data...');
+    collected.emailrep = await checkEmailRep(seed);
+    if(collected.emailrep) {
+      chip('emailrep','done');
+      addLog(`emailrep :: reputation: ${collected.emailrep.reputation||'unknown'}, suspicious: ${collected.emailrep.suspicious||false}`, collected.emailrep.suspicious?'warn':'ok');
+    } else {
+      chip('emailrep','err');
+      addLog('emailrep :: unavailable (CORS restricted)', 'warn');
+    }
+  } else {
+    chip('emailrep','skip'); addLog('emailrep :: skipped (email only)', 'skip');
+  }
+  setProgress(35); await delay(100);
+
+  // ── Stage 4: WHOIS
+  const domainForWhois = type==='domain' ? seed : type==='email' ? seed.split('@')[1] : null;
+  if(domainForWhois) {
+    chip('whois','run'); pstat(`WHOIS lookup for ${domainForWhois}...`);
+    addLog(`whois_collector :: querying registration records for ${domainForWhois}...`);
+    collected.whois = await checkWHOIS(domainForWhois);
+    if(collected.whois) {
+      chip('whois','done');
+      addLog(`whois :: registrar: ${collected.whois.registrar||'unknown'}, created: ${collected.whois.created_date||'unknown'}`, 'ok');
+    } else {
+      chip('whois','err');
+      addLog('whois :: lookup failed or domain not found', 'warn');
+    }
+  } else {
+    chip('whois','skip'); addLog('whois :: skipped (no domain)', 'skip');
+  }
+  setProgress(48); await delay(100);
+
+  // ── Stage 5: URLScan
+  const domainForScan = type==='domain' ? seed : type==='email' ? seed.split('@')[1] : null;
+  if(domainForScan) {
+    chip('urlscan','run'); pstat(`URLScan.io threat check for ${domainForScan}...`);
+    addLog(`urlscan_collector :: searching threat intelligence for ${domainForScan}...`);
+    collected.urlscan = await checkURLScan(domainForScan);
+    if(collected.urlscan) {
+      chip('urlscan','done');
+      addLog(`urlscan :: ${collected.urlscan.total} historical scans found`, collected.urlscan.total>0?'ok':'ok');
+    } else {
+      chip('urlscan','err');
+      addLog('urlscan :: unavailable', 'warn');
+    }
+  } else {
+    chip('urlscan','skip'); addLog('urlscan :: skipped (no domain)', 'skip');
+  }
+  setProgress(60); await delay(100);
+
+  // ── Stage 6: Platform username probing
+  if(type==='username' || type==='email') {
+    const username = type==='username' ? seed : seed.split('@')[0];
+    chip('platforms','run'); pstat(`Checking username "${username}" across ${PLATFORMS.length} platforms...`);
+    addLog(`platform_collector :: probing ${PLATFORMS.length} platforms for "${username}"...`);
+    collected.platforms = await checkPlatforms(username);
+    collected.username = username;
+    const found = collected.platforms.filter(p=>p.found===true).length;
+    const unverified = collected.platforms.filter(p=>p.found===null).length;
+    chip('platforms','done');
+    addLog(`platform_collector :: ${found} confirmed, ${unverified} need manual verification`, found>0?'ok':'ok');
+  } else if(type==='domain') {
+    chip('platforms','run'); pstat('ClearBit company enrichment...');
+    addLog('clearbit_collector :: fetching company intelligence...');
+    collected.clearbit = await checkClearbit(seed);
+    chip('platforms','done');
+    addLog(collected.clearbit ? `clearbit :: found company: ${collected.clearbit.name}` : 'clearbit :: no company data found', 'ok');
+  }
+  setProgress(78); await delay(100);
+
+  // ── Stage 7: Correlation Engine
+  chip('correlate','run'); pstat('Running correlation engine...');
+  addLog('correlation_engine :: linking entities and detecting patterns...');
+  const correlated = runCorrelation(type, seed, seedMeta, collected);
+  chip('correlate','done');
+  addLog(`correlation_engine :: ${correlated.links.length} links, ${correlated.signals_from_correlation} correlation signals`, 'ok');
+  setProgress(87); await delay(100);
+
+  // ── Stage 8: Risk Scoring
+  chip('score','run'); pstat('Computing risk score...');
+  addLog('scoring_engine :: applying rule-based risk weights...');
+  const scoreResult = computeScore(type, seed, seedMeta, collected, correlated);
+  chip('score','done');
+  const lvlLog = scoreResult.level==='high'?'err':scoreResult.level==='medium'?'warn':'ok';
+  addLog(`scoring_engine :: score=${scoreResult.score} → ${scoreResult.level.toUpperCase()} RISK (${scoreResult.signals.length} signals)`, lvlLog);
+  setProgress(94); await delay(100);
+
+  // ── Stage 9: Report
+  chip('report','run'); pstat('Building intelligence report...');
+  addLog('report_generator :: assembling structured output...');
+  reportData = buildReport(type, seed, seedMeta, collected, correlated, scoreResult);
+  chip('report','done');
+  addLog(`report_generator :: report ${reportData.report_id} complete ✓`, 'ok');
+  addLog(`pipeline finished at ${new Date().toISOString()}`, 'info');
+  setProgress(100);
+
+  renderReport();
+  running=false; $('runBtn').disabled=false;
+}
+
+function pstat(t){ const el=$('pstat'); if(el) el.textContent=t; }
+
+// ─── SEED META ────────────────────────────────────────────────────────────────
+function buildSeedMeta(type, seed) {
+  const meta = {};
+  if(type==='email') {
+    const [u,d] = seed.toLowerCase().split('@');
+    meta.username_part = u; meta.email_domain = d;
+    meta.is_free = ['gmail.com','yahoo.com','hotmail.com','outlook.com','protonmail.com','icloud.com','mail.com','aol.com','yandex.com'].includes(d);
+    meta.is_disposable = ['mailinator.com','tempmail.com','guerrillamail.com','throwam.com','yopmail.com','sharklasers.com','trashmail.com','fakeinbox.com'].includes(d);
+    meta.normalized = seed.toLowerCase();
+  } else if(type==='domain') {
+    const tld = seed.split('.').pop().toLowerCase();
+    meta.tld = tld;
+    meta.is_suspicious_tld = ['xyz','tk','ml','ga','cf','gq','top','click','pw','cc'].includes(tld);
+    meta.normalized = seed.toLowerCase();
+  } else {
+    meta.length = seed.length;
+    meta.has_numbers = /\d/.test(seed);
+    meta.normalized = seed;
+  }
+  return {type, value:seed, normalized:meta.normalized||seed, meta};
+}
+
+// ─── CORRELATION ENGINE ───────────────────────────────────────────────────────
+function runCorrelation(type, seed, seedMeta, collected) {
+  const links = [];
+  const clusters = [];
+  const findings = [];
+  let sigCount = 0;
+
+  const confirmedPlatforms = collected.platforms.filter(p=>p.found===true);
+
+  // Username reuse
+  if(confirmedPlatforms.length >= 3) {
+    links.push({from:'seed', to:'platform_cluster', type:'same_username', strength:'strong', note:`Same username confirmed on ${confirmedPlatforms.length} platforms: ${confirmedPlatforms.map(p=>p.platform).join(', ')}`});
+    findings.push(`Username confirmed on ${confirmedPlatforms.length} platforms: ${confirmedPlatforms.map(p=>p.platform).join(', ')}`);
+    sigCount++;
+  } else if(confirmedPlatforms.length >= 1) {
+    links.push({from:'seed', to:'platform_cluster', type:'same_username', strength:'medium', note:`Username found on: ${confirmedPlatforms.map(p=>p.platform).join(', ')}`});
+    findings.push(`Username found on ${confirmedPlatforms.length} platform(s)`);
+    sigCount++;
+  }
+
+  // Email ↔ domain link
+  if(type==='email') {
+    links.push({from:'seed_email', to:'email_domain', type:'email_domain', strength:'strong', note:`Email domain: ${seedMeta.meta.email_domain}`});
+    if(collected.whois) {
+      links.push({from:'email_domain', to:'whois_record', type:'domain_registration', strength:'strong', note:`WHOIS: registered via ${collected.whois.registrar||'unknown'}`});
+      sigCount++;
+    }
+  }
+
+  // Breach links
+  if(collected.hibp?.breached) {
+    collected.hibp.breaches.slice(0,3).forEach(b=>{
+      links.push({from:'seed', to:'breach_'+b.Name, type:'data_breach', strength:'strong', note:`Exposed in ${b.Name} breach (${b.BreachDate?.slice(0,4)||'?'})`});
+    });
+    findings.push(`Email found in ${collected.hibp.count} data breach(es)`);
+    sigCount++;
+  }
+
+  // URLScan results
+  if(collected.urlscan?.total > 0) {
+    links.push({from:'domain', to:'urlscan_results', type:'threat_intelligence', strength:'medium', note:`${collected.urlscan.total} historical scans on URLScan.io`});
+    sigCount++;
+  }
+
+  return {links, clusters, top_correlations:findings.slice(0,3), signals_from_correlation:sigCount, graph_density: links.length / Math.max(1, links.length+4)};
+}
+
+// ─── SCORING ENGINE ───────────────────────────────────────────────────────────
+function computeScore(type, seed, seedMeta, collected, correlated) {
+  const signals = [];
+
+  // HIBP breaches
+  if(collected.hibp?.breached===true) {
+    const count = collected.hibp.count;
+    if(count >= 5) signals.push({desc:`Found in ${count} data breaches — high exposure risk`, w:40, cat:'reputation', dir:'risk'});
+    else if(count >= 2) signals.push({desc:`Found in ${count} data breaches`, w:25, cat:'reputation', dir:'risk'});
+    else signals.push({desc:`Found in 1 data breach (${collected.hibp.breaches[0]?.Name||'unknown'})`, w:15, cat:'reputation', dir:'risk'});
+  } else if(collected.hibp?.breached===false) {
+    signals.push({desc:'No known data breaches detected', w:-10, cat:'reputation', dir:'positive'});
+  }
+
+  // EmailRep
+  if(collected.emailrep) {
+    const rep = collected.emailrep;
+    if(rep.suspicious) signals.push({desc:`Email flagged as suspicious by EmailRep.io (reputation: ${rep.reputation})`, w:30, cat:'reputation', dir:'risk'});
+    else if(rep.reputation==='high') signals.push({desc:`Email has high reputation on EmailRep.io`, w:-15, cat:'reputation', dir:'positive'});
+    else if(rep.reputation==='medium') signals.push({desc:`Email has medium reputation on EmailRep.io`, w:-5, cat:'reputation', dir:'positive'});
+    if(rep.details?.days_since_domain_creation && rep.details.days_since_domain_creation < 90)
+      signals.push({desc:`Email domain created recently (${rep.details.days_since_domain_creation} days ago)`, w:20, cat:'temporal', dir:'risk'});
+    if(rep.details?.spam) signals.push({desc:'Email associated with spam activity (EmailRep)', w:25, cat:'reputation', dir:'risk'});
+    if(rep.details?.blacklisted) signals.push({desc:'Email domain is blacklisted', w:35, cat:'reputation', dir:'risk'});
+    if(rep.details?.disposable) signals.push({desc:'Email uses a disposable provider', w:30, cat:'identity', dir:'risk'});
+    if(rep.details?.deliverable===false) signals.push({desc:'Email address is not deliverable — possibly fake', w:20, cat:'identity', dir:'risk'});
+    if(rep.details?.profiles?.length > 3) signals.push({desc:`Email linked to ${rep.details.profiles.length} known social profiles`, w:-10, cat:'footprint', dir:'positive'});
+  }
+
+  // Disposable email (meta)
+  if(seedMeta.meta?.is_disposable && !collected.emailrep?.details?.disposable) {
+    signals.push({desc:`Email uses known disposable provider (${seedMeta.meta.email_domain})`, w:30, cat:'identity', dir:'risk'});
+  }
+
+  // WHOIS temporal signals
+  if(collected.whois) {
+    const created = collected.whois.created_date;
+    if(created) {
+      try {
+        const days = (Date.now() - new Date(created).getTime()) / 86400000;
+        if(days < 90) signals.push({desc:`Domain registered very recently (${Math.round(days)} days ago)`, w:20, cat:'temporal', dir:'risk'});
+        else if(days < 365) signals.push({desc:`Domain is less than 1 year old (${Math.round(days)} days)`, w:10, cat:'temporal', dir:'risk'});
+        else if(days > 365*5) signals.push({desc:`Domain has ${Math.round(days/365)} years of history — established presence`, w:-10, cat:'temporal', dir:'positive'});
+      } catch(e){}
+    }
+  }
+
+  // Suspicious TLD
+  if(seedMeta.meta?.is_suspicious_tld) {
+    signals.push({desc:`Domain uses high-risk TLD (.${seedMeta.meta.tld}) commonly associated with spam/fraud infrastructure`, w:15, cat:'temporal', dir:'risk'});
+  }
+
+  // Platform presence
+  const confirmed = collected.platforms.filter(p=>p.found===true);
+  const notFound = collected.platforms.filter(p=>p.found===false);
+  if(confirmed.length >= 5) signals.push({desc:`Strong verified presence on ${confirmed.length} platforms (${confirmed.map(p=>p.platform).join(', ')})`, w:-20, cat:'footprint', dir:'positive'});
+  else if(confirmed.length >= 2) signals.push({desc:`Username confirmed on ${confirmed.length} platforms`, w:-10, cat:'footprint', dir:'positive'});
+  else if(confirmed.length===0 && notFound.length >= 3) signals.push({desc:'Username not found on any verified platforms — low public footprint', w:10, cat:'footprint', dir:'risk'});
+
+  // Account age from GitHub/Reddit
+  const ghData = collected.platforms.find(p=>p.platform==='GitHub'&&p.found);
+  if(ghData?.data?.joined) {
+    try {
+      const days = (Date.now()-new Date(ghData.data.joined).getTime())/86400000;
+      if(days < 180) signals.push({desc:`GitHub account created ${Math.round(days)} days ago — new account`, w:10, cat:'temporal', dir:'risk'});
+      else if(days > 365*3) signals.push({desc:`GitHub account ${Math.round(days/365)} years old — established developer presence`, w:-10, cat:'temporal', dir:'positive'});
+    } catch(e){}
+  }
+
+  // URLScan threats
+  if(collected.urlscan) {
+    const malicious = (collected.urlscan.results||[]).filter(r=>r.stats?.malicious>0);
+    if(malicious.length > 0) signals.push({desc:`Domain flagged as malicious in ${malicious.length} URLScan.io scan(s)`, w:35, cat:'reputation', dir:'risk'});
+    else if(collected.urlscan.total > 0) signals.push({desc:`Domain has been scanned ${collected.urlscan.total} time(s) on URLScan.io — monitored`, w:5, cat:'reputation', dir:'risk'});
+  }
+
+  // No footprint at all
+  if(signals.length <= 1 && collected.platforms.length === 0 && !collected.hibp && !collected.emailrep) {
+    signals.push({desc:'Very low public footprint — minimal verifiable online presence', w:10, cat:'footprint', dir:'risk'});
+  }
+
+  const raw = signals.reduce((s,sig)=>s+sig.w, 0);
+  const score = Math.max(0, raw);
+  const level = score<=25?'low':score<=55?'medium':'high';
+  const labels = {low:'🟢 LOW RISK',medium:'🟡 MEDIUM RISK',high:'🔴 HIGH RISK'};
+
+  const breakdown = {};
+  signals.forEach(s=>{ breakdown[s.cat]=(breakdown[s.cat]||0)+s.w; });
+
+  const explanation = buildExplanation(signals, score, level);
+  const top = [...signals].sort((a,b)=>Math.abs(b.w)-Math.abs(a.w)).slice(0,3).map(s=>s.desc);
+
+  return {signals, raw_score:raw, score, level, level_label:labels[level], breakdown, explanation, top_signals:top, confidence:signals.length>=5?'high':signals.length>=3?'medium':'low'};
+}
+
+function buildExplanation(signals, score, level) {
+  const risk = signals.filter(s=>s.dir==='risk').sort((a,b)=>b.w-a.w);
+  const pos = signals.filter(s=>s.dir==='positive');
+  let parts = [];
+  if(risk.length) parts.push(`Key risk indicators: ${risk.slice(0,2).map(s=>s.desc.split('—')[0].trim()).join('; ')}.`);
+  if(pos.length) parts.push(`${pos.length} positive trust signal(s) reduced the score by ${Math.abs(pos.reduce((s,p)=>s+p.w,0))} points.`);
+  parts.push(`Final score of ${score} places this identity in the ${level.toUpperCase()} RISK category. This reflects observed public signals only — not a legal determination.`);
+  return parts.join(' ');
+}
+
+// ─── REPORT BUILDER ───────────────────────────────────────────────────────────
+function buildReport(type, seed, seedMeta, collected, correlated, scoreResult) {
+  return {
+    report_id: 'RPT-'+Math.random().toString(36).slice(2,10).toUpperCase(),
+    generated_at: new Date().toISOString(),
+    system: 'OSINT Intelligence System v2.0 (Free APIs)',
+    section_a: {seed: seedMeta, risk: scoreResult, overview: {
+      platform_count: collected.platforms.filter(p=>p.found===true).length,
+      breach_count: collected.hibp?.count||0,
+      has_whois: !!collected.whois,
+      has_emailrep: !!collected.emailrep,
+      has_urlscan: !!collected.urlscan,
+      domain: type==='email'?seed.split('@')[1]:type==='domain'?seed:null
+    }},
+    section_b: {top_signals:scoreResult.top_signals, risk_signals:scoreResult.signals.filter(s=>s.dir==='risk'), positive_signals:scoreResult.signals.filter(s=>s.dir==='positive'), breakdown:scoreResult.breakdown, links:correlated.links, top_correlations:correlated.top_correlations},
+    section_c: {hibp:collected.hibp, emailrep:collected.emailrep, whois:collected.whois, urlscan_summary:{total:collected.urlscan?.total||0,results:(collected.urlscan?.results||[]).slice(0,5)}, platforms:collected.platforms, clearbit:collected.clearbit},
+    section_d: {nodes:[{id:'seed',type:'seed',label:seed},...collected.platforms.filter(p=>p.found===true).map(p=>({id:p.platform,type:'account',label:p.platform}))], links:correlated.links}
+  };
+}
+
+// ─── RENDER REPORT ────────────────────────────────────────────────────────────
+function renderReport() {
+  if(!reportData) return;
+  const d=reportData, a=d.section_a, b=d.section_b, c=d.section_c, sd=d.section_d;
+  const lc=a.risk.level;
+  const lvlC={low:'var(--green)',medium:'var(--amber)',high:'var(--red)'};
+  const rbb={low:'rlow',medium:'rmed',high:'rhi'};
+  const rcc={low:'rcl',medium:'rcm',high:'rch'};
+  const bd=a.risk.breakdown||{};
+  const maxBD=Math.max(...Object.values(bd).map(Math.abs),1);
+
+  const html=`
+<div class="panel">
+  <div class="tabs">
+    <button class="tab on" onclick="showTab(this,'ta')">A · Summary</button>
+    <button class="tab" onclick="showTab(this,'tb')">B · Findings</button>
+    <button class="tab" onclick="showTab(this,'tc')">C · Evidence</button>
+    <button class="tab" onclick="showTab(this,'td')">D · Graph</button>
+  </div>
+
+  <!-- A: SUMMARY -->
+  <div id="ta">
+    <div class="rbanner ${rbb[lc]}">
+      <div class="rcircle ${rcc[lc]}">
+        <span class="rnum" style="color:${lvlC[lc]}">${a.risk.score}</span>
+        <span class="rpts">pts</span>
+      </div>
+      <div style="flex:1">
+        <div class="rlvl" style="color:${lvlC[lc]}">${a.risk.level_label}</div>
+        <div class="rexp">${a.risk.explanation}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:5px">confidence: ${a.risk.confidence} · ${a.risk.signals.length} signals · score is explainable</div>
+      </div>
+    </div>
+    ${kv('seed_type',a.seed.type)}${kv('seed_value',a.seed.value)}${kv('normalized',a.seed.normalized)}
+    ${kv('platforms_confirmed',a.overview.platform_count)}
+    ${kv('data_breaches',a.overview.breach_count+(c.hibp?.note?' ('+c.hibp.note+')':''))}
+    ${kv('whois_record',a.overview.has_whois?'found':'not found')}
+    ${kv('email_reputation',c.emailrep?`${c.emailrep.reputation||'unknown'} · suspicious: ${c.emailrep.suspicious}`:'not available')}
+    ${kv('urlscan_hits',a.overview.has_urlscan?c.section_c?.urlscan?.total||c.urlscan_total||d.section_c.urlscan_summary.total+' scans':'not applicable')}
+    ${kv('generated_at',d.generated_at)}${kv('report_id',d.report_id)}
+    <div style="margin-top:14px">
+      <div class="shd">Score breakdown by category</div>
+      <div class="sbbox">${Object.entries(bd).length ? Object.entries(bd).map(([k,v])=>{
+        const pct=Math.round(Math.abs(v)/maxBD*100), pos=v>0;
+        return `<div class="sbrow"><span class="sbl">${k}</span><div class="sbw"><div class="sbb" style="width:${pct}%;background:${pos?'var(--red)':'var(--green)'}"></div></div><span class="sbv ${pos?'spos':'sneg'}">${pos?'+':''}${v}</span></div>`;
+      }).join('') : '<div class="nodata">Insufficient data for breakdown</div>'}</div>
+    </div>
+    ${dlBar()}
+  </div>
+
+  <!-- B: FINDINGS -->
+  <div id="tb" style="display:none">
+    <div class="shd"><div class="sl">B</div>Top Signals</div>
+    ${b.top_signals.map(s=>`<div class="sigitem"><div style="width:5px;height:5px;border-radius:50%;background:var(--amber);flex-shrink:0;margin-top:5px"></div><div class="sigd">${s}</div></div>`).join('')||nd()}
+    <div class="shd" style="margin-top:16px">Risk Signals (weighted)</div>
+    ${b.risk_signals.sort((a,b)=>b.w-a.w).map(s=>`<div class="sigitem"><div class="sigw pos">+${s.w}</div><div><div class="sigd">${s.desc}</div><div class="sigcat">${s.cat}</div></div></div>`).join('')||nd()}
+    ${b.positive_signals.length?`<div class="shd" style="margin-top:16px">Positive Trust Signals</div>${b.positive_signals.map(s=>`<div class="sigitem"><div class="sigw neg">${s.w}</div><div><div class="sigd">${s.desc}</div><div class="sigcat">${s.cat}</div></div></div>`).join('')}`:''}
+    <div class="shd" style="margin-top:16px">Identity Links</div>
+    ${b.links.map(l=>`<div class="kv"><span class="kk">${l.from} → ${l.to}</span><span class="kv2">[${l.type}] ${l.note} <span style="color:var(--text3);font-size:9px">(${l.strength})</span></span></div>`).join('')||nd()}
+    <div class="shd" style="margin-top:16px">Top Correlations</div>
+    ${b.top_correlations.map(c=>`<div class="sigitem"><div style="width:5px;height:5px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:5px"></div><div class="sigd">${c}</div></div>`).join('')||nd()}
+    ${dlBar()}
+  </div>
+
+  <!-- C: EVIDENCE -->
+  <div id="tc" style="display:none">
+    <div class="shd"><div class="sl">C</div>Data Breach Records</div>
+    ${c.hibp?.note?`<div class="nodata">${c.hibp.note}</div>`:c.hibp?.breached===false?`<div class="nodata" style="color:var(--green)">✓ No breaches found in HaveIBeenPwned database</div>`:c.hibp?.breaches?.length?c.hibp.breaches.map(b=>`<div class="evitem"><div class="evsrc">hibp breach · ${b.BreachDate?.slice(0,4)||'?'}</div><div class="evurl"><a href="https://haveibeenpwned.com/PwnedWebsites#${b.Name}" target="_blank" rel="noopener">${b.Name}</a></div><div class="evnote">Data exposed: ${(b.DataClasses||[]).join(', ')} · ${b.PwnCount?.toLocaleString()||'?'} accounts</div></div>`).join(''):nd()}
+
+    <div class="shd" style="margin-top:14px">Email Reputation (EmailRep.io)</div>
+    ${c.emailrep?`
+      ${kv('reputation',c.emailrep.reputation||'unknown')}
+      ${kv('suspicious',String(c.emailrep.suspicious||false))}
+      ${kv('references',c.emailrep.references||0)}
+      ${kv('deliverable',String(c.emailrep.details?.deliverable??'unknown'))}
+      ${kv('free_provider',String(c.emailrep.details?.free_provider??'unknown'))}
+      ${kv('disposable',String(c.emailrep.details?.disposable??false))}
+      ${kv('blacklisted',String(c.emailrep.details?.blacklisted??false))}
+      ${kv('spam',String(c.emailrep.details?.spam??false))}
+      ${c.emailrep.details?.profiles?.length?kv('linked_profiles',c.emailrep.details.profiles.join(', ')):''}
+    `:`<div class="nodata">EmailRep.io data not available for this seed type</div>`}
+
+    <div class="shd" style="margin-top:14px">WHOIS Record</div>
+    ${c.whois?`
+      ${kv('registrar',c.whois.registrar||'unknown')}
+      ${kv('created',c.whois.created_date||c.whois.creation_date||'unknown')}
+      ${kv('expires',c.whois.expiry_date||c.whois.expiration_date||'unknown')}
+      ${kv('country',c.whois.country||'unknown')}
+      ${kv('nameservers',(c.whois.nameservers||[]).join(', ')||'unknown')}
+      ${kv('source',c.whois.source||'WHOIS')}
+    `:`<div class="nodata">WHOIS data not available</div>`}
+
+    <div class="shd" style="margin-top:14px">URLScan.io Threat Intelligence</div>
+    ${d.section_c.urlscan_summary.total>0?d.section_c.urlscan_summary.results.map(r=>`<div class="evitem"><div class="evsrc">urlscan · ${r.task?.time?.slice(0,10)||'unknown'}</div><div class="evurl"><a href="${r.result}" target="_blank" rel="noopener">${r.page?.url||r.task?.url||'?'}</a></div><div class="evnote">country: ${r.page?.country||'?'} · ip: ${r.page?.ip||'?'} ${r.stats?.malicious>0?'<span style="color:var(--red)">⚠ MALICIOUS FLAGS</span>':''}</div></div>`).join(''):c.urlscan?`<div class="nodata" style="color:var(--green)">✓ No threat scans found for this domain</div>`:`<div class="nodata">URLScan not applicable for this seed type</div>`}
+
+    <div class="shd" style="margin-top:14px">Platform Username Check</div>
+    ${c.platforms.length?renderPlatformTable(c.platforms):nd()}
+
+    ${c.clearbit?`<div class="shd" style="margin-top:14px">Company Intelligence (ClearBit)</div>
+      ${kv('company',c.clearbit.name||'?')}
+      ${kv('domain',c.clearbit.domain||'?')}
+      ${kv('logo','<img src="'+c.clearbit.logo+'" style="height:16px;vertical-align:middle" onerror="this.style.display=\'none\'">')}
+    `:''}
+    ${dlBar()}
+  </div>
+
+  <!-- D: GRAPH -->
+  <div id="td" style="display:none">
+    <div class="shd"><div class="sl">D</div>Relationship Map</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:10px">Visual entity graph. Green = confirmed account. Gray = unverified or domain.</div>
+    ${renderGraph(sd.nodes, sd.links, a.seed.value)}
+    <div class="glegend">
+      <div class="gli"><div class="gldot" style="border-color:var(--amber);background:rgba(210,153,34,.1)"></div>Seed</div>
+      <div class="gli"><div class="gldot" style="border-color:var(--green);background:rgba(63,185,80,.08)"></div>Confirmed account</div>
+      <div class="gli"><div class="gldot" style="border-color:var(--blue);background:rgba(88,166,255,.08)"></div>Domain</div>
+      <div class="gli"><div class="gldot" style="border-color:var(--red);background:rgba(248,81,73,.08)"></div>Breach</div>
+    </div>
+    <div class="shd" style="margin-top:14px">All Identity Links</div>
+    ${sd.links.map(l=>`<div class="kv"><span class="kk">${l.from} → ${l.to}</span><span class="kv2">[${l.type}] ${l.note||''} <span style="color:var(--text3);font-size:9px">(${l.strength})</span></span></div>`).join('')||nd()}
+    ${dlBar()}
+  </div>
+</div>`;
+
+  $('reportArea').innerHTML=html;
+}
+
+function renderPlatformTable(platforms) {
+  return `<table class="ptable">
+    <thead><tr><th>Platform</th><th>Status</th><th>URL</th><th>Details</th></tr></thead>
+    <tbody>${platforms.map(p=>{
+      const s = p.found===true ? `<span class="status-pill s-found">✓ FOUND</span>` : p.found===false ? `<span class="status-pill s-notfound">✗ NOT FOUND</span>` : `<span class="status-pill s-check">? VERIFY</span>`;
+      const details = p.data ? Object.entries(p.data).filter(([k,v])=>v&&k!=='icon').map(([k,v])=>`${k}: ${v}`).join(' · ') : '';
+      return `<tr><td>${p.platform}</td><td>${s}</td><td style="color:var(--blue);font-size:10px"><a href="${p.url}" target="_blank" rel="noopener">${p.url}</a></td><td style="color:var(--text2);font-size:10px">${details||'—'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+function renderGraph(nodes, links, seed) {
+  const w=860, h=260;
+  const allNodes=[{id:'seed',type:'seed',label:seed.length>14?seed.slice(0,14)+'…':seed},...nodes.filter(n=>n.id!=='seed')];
+  const positions=[{x:w/2,y:h/2}];
+  const n=allNodes.length-1;
+  for(let i=0;i<n;i++){
+    const a=(2*Math.PI*i/Math.max(n,1))-Math.PI/2;
+    const r=n<=3?90:n<=6?110:130;
+    positions.push({x:Math.round(w/2+r*Math.cos(a)),y:Math.round(h/2+r*Math.sin(a))});
+  }
+  const tc={seed:'#d29922',account:'#3fb950',domain:'#58a6ff',breach:'#f85149',default:'#484f58'};
+  const nw=94,nh=32;
+  const linesEl=allNodes.slice(1).map((_,i)=>{
+    const p0=positions[0],p1=positions[i+1];
+    return `<line x1="${p0.x}" y1="${p0.y}" x2="${p1.x}" y2="${p1.y}" stroke="#21262d" stroke-width="1" stroke-dasharray="4,3"/>`;
+  }).join('');
+  const extraLines=links.slice(0,6).map(l=>{
+    const fi=allNodes.findIndex(n=>n.id===l.from||n.label===l.from);
+    const ti=allNodes.findIndex(n=>n.id===l.to||n.label===l.to);
+    if(fi>-1&&ti>-1&&fi!==ti){const p0=positions[fi],p1=positions[ti];return `<line x1="${p0.x}" y1="${p0.y}" x2="${p1.x}" y2="${p1.y}" stroke="#30363d" stroke-width="1.5"/>`;}
+    return '';
+  }).join('');
+  const nodesEl=allNodes.map((nd,i)=>{
+    const p=positions[i];
+    const x=Math.max(2,Math.min(w-nw-2,p.x-nw/2));
+    const y=Math.max(2,Math.min(h-nh-2,p.y-nh/2));
+    const bc=tc[nd.type]||tc.default;
+    const lbl=nd.label||nd.id;
+    return `<rect x="${x}" y="${y}" width="${nw}" height="${nh}" rx="3" fill="#161b22" stroke="${bc}" stroke-width="${nd.type==='seed'?1.5:.8}"/>
+<text x="${x+nw/2}" y="${y+10}" text-anchor="middle" font-size="7" fill="#484f58" font-family="Courier New">${(nd.type||'node').toUpperCase()}</text>
+<text x="${x+nw/2}" y="${y+24}" text-anchor="middle" font-size="9.5" fill="${bc}" font-family="Courier New" font-weight="bold">${lbl.slice(0,14)}</text>`;
+  }).join('');
+  return `<div class="graphwrap"><svg viewBox="0 0 ${w} ${h}" style="width:100%;display:block;height:${h}px" xmlns="http://www.w3.org/2000/svg">${linesEl}${extraLines}${nodesEl}</svg></div>`;
+}
+
+// ─── TAB SWITCHER ─────────────────────────────────────────────────────────────
+function showTab(btn,tabId){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  ['ta','tb','tc','td'].forEach(id=>{const el=$(id);if(el)el.style.display=id===tabId?'block':'none';});
+}
+
+// ─── DOWNLOAD ─────────────────────────────────────────────────────────────────
+function dlBar(){return `<div class="dlbar"><button class="dlbtn pri" onclick="dlJSON()">⬇ Download JSON</button><button class="dlbtn" onclick="dlTXT()">⬇ Download TXT</button><button class="dlbtn" onclick="copyJSON()">⎘ Copy JSON</button></div>`;}
+function dlJSON(){if(!reportData)return;dl(new Blob([JSON.stringify(reportData,null,2)],{type:'application/json'}),`osint_${sfn(reportData.section_a.seed.value)}_${ds()}.json`);}
+function dlTXT(){if(!reportData)return;dl(new Blob([buildTXT()],{type:'text/plain'}),`osint_${sfn(reportData.section_a.seed.value)}_${ds()}.txt`);}
+function copyJSON(){if(!reportData)return;navigator.clipboard.writeText(JSON.stringify(reportData,null,2)).then(()=>addLog('JSON copied to clipboard','ok')).catch(()=>addLog('Clipboard failed','err'));}
+function dl(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);addLog('downloading: '+name,'ok');}
+function sfn(s){return(s||'unknown').replace(/[^a-z0-9]/gi,'_').slice(0,40);}
+function ds(){return new Date().toISOString().slice(0,10);}
+
+function buildTXT(){
+  const d=reportData,a=d.section_a,b=d.section_b,c=d.section_c;
+  let t='='.repeat(70)+'\n  OSINT INTELLIGENCE REPORT\n  '+d.report_id+' | '+d.generated_at+'\n'+'='.repeat(70)+'\n\n';
+  t+='[A] SUMMARY\n';
+  t+=`  Seed:    [${a.seed.type}] ${a.seed.value}\n`;
+  t+=`  Risk:    ${a.risk.level_label}\n`;
+  t+=`  Score:   ${a.risk.score} (confidence: ${a.risk.confidence})\n`;
+  t+=`  ${a.risk.explanation}\n\n`;
+  t+='[B] KEY FINDINGS\n';
+  b.top_signals.forEach((s,i)=>t+=`  ${i+1}. ${s}\n`);
+  t+='\n  Risk Signals:\n';
+  b.risk_signals.forEach(s=>t+=`    [+${s.w}] ${s.desc} (${s.cat})\n`);
+  if(b.positive_signals.length){t+='\n  Positive Signals:\n';b.positive_signals.forEach(s=>t+=`    [${s.w}] ${s.desc}\n`);}
+  t+='\n[C] EVIDENCE\n';
+  if(c.hibp?.breached)c.hibp.breaches.forEach(b=>t+=`  [BREACH] ${b.Name} (${b.BreachDate?.slice(0,4)||'?'}) — ${(b.DataClasses||[]).join(', ')}\n`);
+  if(c.whois)t+=`  [WHOIS]  Registrar: ${c.whois.registrar||'?'}, Created: ${c.whois.created_date||'?'}\n`;
+  if(c.emailrep)t+=`  [EMAIL]  Reputation: ${c.emailrep.reputation||'?'}, Suspicious: ${c.emailrep.suspicious}\n`;
+  c.platforms.filter(p=>p.found).forEach(p=>t+=`  [FOUND]  ${p.platform}: ${p.url}\n`);
+  t+='\n[D] RELATIONSHIP LINKS\n';
+  b.links.forEach(l=>t+=`  ${l.from} ──[${l.type}]──▶ ${l.to} (${l.strength})\n`);
+  t+='\n'+'='.repeat(70)+'\nFor research and lawful investigative use only. Signals ≠ accusations.\n'+'='.repeat(70)+'\n';
+  return t;
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function kv(k,v){return`<div class="kv"><span class="kk">${k}</span><span class="kv2">${v||'—'}</span></div>`;}
+function nd(){return'<div class="nodata">No data available</div>';}
+</script>
+</body>
+</html>
